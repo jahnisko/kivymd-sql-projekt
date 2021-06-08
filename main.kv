@@ -20,8 +20,8 @@ BoxLayout:
 <FirmaContent>:
     orientation: 'vertical'
     size_hint_x: 1
-    size_hint_y: 5
-    height: "1000dp"
+    size_hint_y: None
+    height: "300dp"
 
     MDTextField:
         id: nazev
@@ -29,38 +29,35 @@ BoxLayout:
         pos_hint: {'center_x': .5, 'center_y': 1}
 
     MDTextField:
-        id: odvetvi
+        id: ico
         pos_hint: {'center_x': .5, 'center_y': 0}
         size_hint_x: 1
-        text: 'Odvětví firmy'
 
-    MDTextField:
-        id: misto
-        text: "Místo podnikání"
+        text: 'Typ společnosti'
 
-    MDTextField:
-        id: tel
-        text: "Telefonní kontakt"
 
 <ZamestnanecContent>:
     orientation: 'vertical'
     size_hint_x: 1
-    size_hint_y: 5
-    height: "100dp"
+    size_hint_y: None
+    height: "300dp"
 
     MDTextField:
         id: jmeno
         text: 'Jméno a příjmení'
-        pos_hint: {'center_x': .5, 'center_y': 1}
+        pos_hint: {'center_x': .5, 'center_y': .8}
 
     MDTextField:
         id: pozice
-        pos_hint: {'center_x': .5, 'center_y': 0}
+        pos_hint: {'center_x': .5, 'center_y': .6}
         size_hint_x: 1
         text: 'Pozice ve firmě'
 
-    MDTextField:
-        id: firma
-        text: "Firma"
 
+    MDDropDownItem:
+        id: firma_item
+        pos_hint: {'center_x': .5, 'center_y': .4}
+        size_hint_x: 1
+        text: 'Firma'
+        on_release: self.parent.menu_firm.open()
 

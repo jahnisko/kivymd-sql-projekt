@@ -1,7 +1,7 @@
 from kivy.lang import Builder
 from kivy.uix.screenmanager import Screen
 
-from classes.database import Database, Zamestnanec, Kategorie
+from classes.database import Database, Zamestnanec, Firma
 # Import aplikačního
 from kivy.app import App
 # Importy Kivy komponent
@@ -14,11 +14,6 @@ from kivymd.uix.dialog import MDDialog
 from kivymd.uix.list import MDList, TwoLineAvatarIconListItem, ImageLeftWidget, IconRightWidget, ThreeLineIconListItem, \
     ThreeLineAvatarListItem, IconLeftWidget
 from kivymd.uix.menu import MDDropdownMenu
-
-
-class ZamestnanecContent(BoxLayout):
-    def __init__(self, *args, **kwargs):
-        super().__init__(**kwargs)
 
 
 class FirmaContent(BoxLayout):
@@ -43,18 +38,13 @@ class FirmaDialog(MDDialog):
 
     def save_dialog(self, *args):
         # Slovník, ve kterém budou údaje z dialogu
-        app = App.get_running_app()
-        zamestnanec = {}
-        zamestnanec['nazev'] = self.content_cls.ids.nazev.text
-        zamestnanec['odvetvi'] = self.content_cls.ids.odvetvi.text
-        zamestnanec['misto'] = self.content_cls.ids.misto.text
-        zamestnanec['tel'] = self.content_cls.ids.tel.text
-        if self.id:
-            zamestnanec['id']=self.id
-            app.firma.db.update(zamestnanec)
-        else:
-            app.firma.db.create_firma(zamestnanec)
-        self.dismiss() # zavření dialogového okna
+        # app = App.get_running_app()
+        firma = Firma()
+        firma.nazev = self.content_cls.ids.nazev.text
+        firma.kategorie = self.content_cls.ids.ico.text
+        self.database = Database(dbtype='sqlite', dbname='firmy.db')
+        self.database.create_firma(firma)
+        self.dismiss()
 
     def cancel_dialog(self, *args):
         self.dismiss()
@@ -65,7 +55,7 @@ class DialogZamestnance(MDDialog):
         zamestnanec = Zamestnanec()
         super(DialogZamestnance, self).__init__(
             type="custom",
-            content_cls=ZamestnanecContent(),
+            content_cls=ZamestnanecContent(id),
             title="Aktualizace zaměstnance",
             text="Dialog zaměstnance",
             size_hint=(.8, 1),
@@ -79,13 +69,16 @@ class DialogZamestnance(MDDialog):
     def save_dialog(self, *args):
         # Slovník, ve kterém budou údaje z dialogu
         app = App.get_running_app()
-        zamestnanec = {}
-        zamestnanec['jmeno'] = self.content_cls.ids.jmeno.text
-        zamestnanec['pozice'] = self.content_cls.ids.pozice.text
-        zamestnanec['firma'] = self.content_cls.ids.firma.text
         if self.id:
-            zamestnanec['id']=self.id
+            zamestnanec = app.zamestnanci.db.read_zamestnanec_by_id(self.id)
+        else:
+            zamestnanec = Zamestnanec()
+        zamestnanec.jmeno = self.content_cls.ids.jmeno.text
+        zamestnanec.pozice = self.content_cls.ids.pozice.text
+        zamestnanec.firma_id = self.content_cls.ids.firma_item.firma_id
+        if self.id:
             app.zamestnanci.db.update()
+            app.zamestnanci.vypis_prepis()
         else:
             app.zamestnanci.db.create_zamestnanec(zamestnanec)
         self.dismiss() # zavření dialogového okna
@@ -94,31 +87,34 @@ class DialogZamestnance(MDDialog):
         self.dismiss()
 
 
-class UdajeZamestnanec(BoxLayout):
+class ZamestnanecContent(BoxLayout):
     def __init__(self, id, *args, **kwargs):
         super().__init__(**kwargs)
         if id:
-            zamestnanec = vars(app.zamestnanci.database.read_zamestnanec_by_id(id))
+            zamestnanec = app.zamestnanci.db.read_zamestnanec_by_id(id)
         else:
-            zamestnanec = {"id":"", "jmeno":"","pozice":"","firma":""}
+            zamestnanec = Zamestnanec()
 
-        self.ids.zamestnanec_jmeno.text = zamestnanec['jmeno']
-        firmy = app.zamestnanci.database.read_firma()
-        menu_items = [{"viewclass": "OneLineListItem", "text": f"{firma.nazev}", "on_release": lambda x=f"{firma.nazev}": self.set_item(x)} for firma in firmy]
-        self.menu_firmy = MDDropdownMenu(
-            caller=self.ids.firma_nazev,
+        firmy = app.zamestnanci.db.read_firma()
+        menu_items = [{"viewclass": "OneLineListItem", "firma_id": firma.id, "text": f"{firma.nazev} {firma.kategorie}", "on_release": lambda x=f"{firma.nazev}", y=firma.id: self.set_item(x, y)} for firma in firmy]
+        self.menu_firm = MDDropdownMenu(
+            caller=self.ids.firma_item,
             items=menu_items,
             position="center",
             width_mult=5,
         )
-        self.ids.nazev.set_item(zamestnanec['firma'])
-        self.ids.pozice.text = zamestnanec['pozice']
+        if id:
+            self.ids.jmeno.text = zamestnanec.jmeno
+            self.ids.firma_item.set_item(zamestnanec.firma.nazev)
+            self.ids.firma_item.firma_id = zamestnanec.firma_id
+            self.ids.pozice.text = zamestnanec.pozice
 
-    def set_item(self, text_item):
-        self.ids.nazev.set_item(text_item)
-        self.ids.nazev.text = text_item
+    def set_item(self, text_item, firma_id):
+        self.ids.firma_item.set_item(text_item)
+        self.ids.firma_item.text = text_item
+        self.ids.firma_item.firma_id = firma_id
         # Zavření menu
-        self.menu_firmy.dismiss()
+        self.menu_firm.dismiss()
 
 
 # Třída, která souvisí se zaměstnancem a jeho údaji u databáze
@@ -199,6 +195,7 @@ class Employees(BoxLayout):
     def create_zamestnanec(self):
         self.dialog = DialogZamestnance(id=None)
         self.dialog.open()
+        self.vypis_prepis()
 
     def delete_zam(self, id):
         self.db.delete_zamestnanec(id)

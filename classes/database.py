@@ -13,13 +13,6 @@ Base = declarative_base()
 
 
 # Tabulka představující kategorii, do které daná firma spadá (a. s., s. r. o. atd.)
-class Kategorie(Base):
-    __tablename__ = 'kategorie'
-
-    id = Column(Integer, primary_key=True)
-    # Řádek typu Enum (výběr z položek), nemusí být nutně jako obchodní společnost, klidně i odvětví
-    typ = Column(Enum('a. s.', 's. r. o.', 'o. s.', 'k. s.', 'v. o. s.', 'družstvo', 'živnostenské oprávnění'), nullable=False)
-    firmy = relationship('Firma', backref='kategorie')
 
 
 # Tabulka představující údaje o firmě
@@ -28,12 +21,7 @@ class Firma(Base):
 
     id = Column(Integer, primary_key=True)
     nazev = Column(String(100), nullable=True)
-    ico = Column(Integer, nullable=True)
-    odvetvi = Column(String(100), nullable=True)
-    misto = Column(String(255), nullable=True)
-    tel_cislo = Column(Integer, nullable=True)
-    email = Column(String(50))
-    kategorie_id = Column(Integer, ForeignKey('kategorie.id'))
+    kategorie = Column(String(5), nullable=True)
     zamestnanci = relationship('Zamestnanec', backref='firma')
 
 
@@ -85,14 +73,6 @@ class Database:
         except:
             return False
 
-    def create_kategorie(self, kateogorie):
-        try:
-            self.session.add(kateogorie)
-            self.session.commit()
-            return True
-        except:
-            return False
-
     def create_zamestnanec(self, zamestnanec):
         try:
             self.session.add(zamestnanec)
@@ -115,19 +95,6 @@ class Database:
         except:
             return False
 
-    def read_firma_by_kategorie(self, kategorie):
-        try:
-            result = self.session.query(Firma).join(Kategorie).filter(Kategorie.typ.like(f'%{kategorie}%')).order_by(Firma.nazev).all()
-            return result
-        except:
-            return False
-
-    def read_kategorie_by_id(self, id):
-        try:
-            result = self.session.query(Kategorie).get(id)
-            return result
-        except:
-            return False
 
     def read_zamestnanec_by_id(self, id):
         try:
@@ -152,14 +119,6 @@ class Database:
         except:
             return False
 
-    def delete_kategorie(self, id):
-        try:
-            kategorie = self.read_kategorie_by_id(id)
-            self.session.delete(kategorie)
-            self.session.commit()
-            return True
-        except:
-            return False
 
     def delete_zamestnanec(self, id):
         try:
